@@ -26,15 +26,21 @@ fn get_cover_url(artist: &str, album: &str) -> Option<String> {
 
     let mbid = resp["releases"][0]["id"].as_str()?;
 
-    Some(format!("https://coverartarchive.org/release/{}/front", mbid))
+    Some(format!(
+        "https://coverartarchive.org/release/{}/front",
+        mbid
+    ))
 }
 
-fn set_discord_activity(
-    drpc: &mut Client,
-    title: &str,
-    artist: Option<&str>,
-    album: Option<&str>,
-) {
+fn clear_discord_activity(drpc: &mut Client) {
+    let result = drpc.clear_activity();
+    match result {
+        Ok(_) => println!("Activity cleared!"),
+        Err(e) => eprintln!("clear_activity error: {:?}", e),
+    }
+}
+
+fn set_discord_activity(drpc: &mut Client, title: &str, artist: Option<&str>, album: Option<&str>) {
     let details_text = match artist {
         Some(a) => format!("{} - {}", title, a),
         None => title.to_string(),
@@ -46,7 +52,10 @@ fn set_discord_activity(
         _ => "elisalogo".to_string(),
     };
 
-    println!("Setting activity: {} | {} | cover: {}", details_text, state_text, cover_url);
+    println!(
+        "Setting activity: {} | {} | cover: {}",
+        details_text, state_text, cover_url
+    );
 
     let result = drpc.set_activity(|act: Activity| {
         act.details(&details_text)
@@ -101,6 +110,12 @@ fn main() {
                 if last_title.as_deref() != Some(t.as_str()) {
                     set_discord_activity(&mut drpc, t, artist.as_deref(), album.as_deref());
                     last_title = title.clone();
+                }
+            } else {
+                // Leerer Block ohne Titel = keine Musik mehr
+                if last_title.is_some() {
+                    clear_discord_activity(&mut drpc);
+                    last_title = None;
                 }
             }
             title = None;

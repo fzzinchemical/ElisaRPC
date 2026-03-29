@@ -18,7 +18,7 @@ fn get_cover_url(artist: &str, album: &str) -> Option<String> {
 
     let resp: serde_json::Value = http
         .get(&search_url)
-        .header("User-Agent", "ElisaRPC/0.1 (deine@email.de)")
+        .header("User-Agent", "ElisaRPC/0.1")
         .send()
         .ok()?
         .json()

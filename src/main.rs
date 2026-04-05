@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
+use std::sync::{Arc, Mutex};
 
 fn get_cover_url(artist: &str, album: &str) -> Option<String> {
     let http = HttpClient::new();
@@ -80,6 +81,42 @@ fn main() {
 
     println!("Monitoring metadata...");
 
+    let drpc = Arc::new(Mutex::new(drpc));
+
+    start_status_watcher(Arc::clone(&drpc));
+    monitor_metadata(metadata_pattern, drpc);
+}
+
+// background thread: if elisa is playing → keep, else → clear
+fn start_status_watcher(drpc: Arc<Mutex<Client>>) {
+    thread::spawn(move || loop {
+        let state = Command::new("playerctl")
+            .args(["-p", "elisa", "status"])
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string());
+
+        if let Some(s) = state {
+            if s == "Playing" {
+                // keep presence
+            } else {
+                if let Ok(mut c) = drpc.lock() {
+                    clear_discord_activity(&mut *c);
+                }
+            }
+        } else {
+            if let Ok(mut c) = drpc.lock() {
+                clear_discord_activity(&mut *c);
+            }
+        }
+
+        thread::sleep(Duration::from_secs(2));
+    });
+}
+
+// main loop: reads metadata and updates presence
+fn monitor_metadata(metadata_pattern: Regex, drpc: Arc<Mutex<Client>>) {
     let mut title: Option<String> = None;
     let mut artist: Option<String> = None;
     let mut album: Option<String> = None;
@@ -108,16 +145,18 @@ fn main() {
         if line.trim().is_empty() {
             if let Some(ref t) = title {
                 if last_title.as_deref() != Some(t.as_str()) {
-                    set_discord_activity(&mut drpc, t, artist.as_deref(), album.as_deref());
+                    if let Ok(mut c) = drpc.lock() {
+                        set_discord_activity(&mut *c, t, artist.as_deref(), album.as_deref());
+                    }
                     last_title = title.clone();
                 }
-            } else {
-                // Leerer Block ohne Titel = keine Musik mehr
-                if last_title.is_some() {
-                    clear_discord_activity(&mut drpc);
-                    last_title = None;
+            } else if last_title.is_some() {
+                if let Ok(mut c) = drpc.lock() {
+                    clear_discord_activity(&mut *c);
                 }
+                last_title = None;
             }
+
             title = None;
             artist = None;
             album = None;
@@ -133,7 +172,14 @@ fn main() {
                     let new_title = value.clone();
                     if last_title != new_title {
                         if let Some(ref t) = new_title {
-                            set_discord_activity(&mut drpc, t, artist.as_deref(), album.as_deref());
+                            if let Ok(mut c) = drpc.lock() {
+                                set_discord_activity(
+                                    &mut *c,
+                                    t,
+                                    artist.as_deref(),
+                                    album.as_deref(),
+                                );
+                            }
                             last_title = new_title.clone();
                         }
                     }

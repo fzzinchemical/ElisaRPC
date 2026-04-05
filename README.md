@@ -1,5 +1,16 @@
 # ElisaRPC
 
+This Project is a fork of the original [ElisaRPC](github.com/renarin-kholin/ElisaRPC) project, which is no longer maintained.
+Due to recode and some changes, the bugs and features of this branch may differ from the original one.
+
+**If you encounter any issues, please do not report them to the original project. Instead, report them to this fork or contact me.**
+
+
+# Known Issues
+[ ] Application causes Pipewire to crash.
+[ ] Some Album covers are not fetched.
+[ ] RPC does not stop in discord even when no song is playing.
+
 ## Build Instructions
 
 You need to have rust and cargo installed to build this project.

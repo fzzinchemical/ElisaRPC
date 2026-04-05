@@ -7,9 +7,9 @@ Due to recode and some changes, the bugs and features of this branch may differ 
 
 
 # Known Issues
-[ ] Application causes Pipewire to crash.
-[ ] Some Album covers are not fetched.
-[ ] RPC does not stop in discord even when no song is playing.
+- Application causes Pipewire to crash.
+- Some Album covers are not fetched.
+- RPC does not stop in discord even when no song is playing.
 
 ## Build Instructions
 
